@@ -1,7 +1,9 @@
 
-import streamlit as st, time, sys, os
+import streamlit as st
+import requests
+import time
+import os
 from datetime import datetime
-sys.path.insert(0, "/tmp/cvip_app")
 
 st.set_page_config(page_title="CVIP RAG", page_icon="🤖", layout="wide")
 st.markdown("""<style>
@@ -13,74 +15,93 @@ border-left:3px solid #ffc107;margin:.3rem 0;font-size:.9rem;}
 
 if "chat_history" not in st.session_state: st.session_state.chat_history=[]
 if "session_id"   not in st.session_state: st.session_state.session_id=f"ui_{int(time.time())}"
-if "initialized"  not in st.session_state: st.session_state.initialized=False
-if "rag"          not in st.session_state: st.session_state.rag=None
 
-@st.cache_resource
-def load_rag():
-    os.environ.setdefault("DATABRICKS_HOST","https://dbc-9d1ce33e-6acf.cloud.databricks.com")
-    with open("/tmp/cvip_app/rag_components.py") as f:
-        source = f.read()
-    namespace = {"__name__": "__main__"}
-    exec(compile(source, "rag_components.py", "exec"), namespace)
-    FinalProductionRAG = namespace["FinalProductionRAG"]
-    return FinalProductionRAG(
-        enable_reranking=False, enable_persistence=True,
-        flush_every_n=3, flush_every_seconds=30
+DATABRICKS_HOST  = os.environ.get("DATABRICKS_HOST",  "https://dbc-9d1ce33e-6acf.cloud.databricks.com")
+DATABRICKS_TOKEN = os.environ.get("DATABRICKS_TOKEN", "")
+LLM_ENDPOINT     = "databricks-meta-llama-3-3-70b-instruct"
+VECTOR_INDEX     = "workspace.default.cvip_chunks_vs_index"
+VECTOR_ENDPOINT  = "cvip_endpoint"
+
+def query_llm(query, context):
+    import mlflow.deployments
+    client = mlflow.deployments.get_deploy_client("databricks")
+    response = client.predict(
+        endpoint=LLM_ENDPOINT,
+        inputs={
+            "messages": [
+                {"role": "system", "content": (
+                    "You are an expert in Computer Vision and Image Processing. "
+                    "Answer ONLY using the provided context. "
+                    "Cite sources using [Source: name] format."
+                )},
+                {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"}
+            ],
+            "max_tokens": 800,
+            "temperature": 0.1,
+            "stream": False
+        }
     )
+    return response["choices"][0]["message"]["content"]
 
+def query_vector_search(query):
+    from databricks.vector_search.client import VectorSearchClient
+    vsc   = VectorSearchClient()
+    index = vsc.get_index(
+        endpoint_name=VECTOR_ENDPOINT,
+        index_name=VECTOR_INDEX
+    )
+    results = index.similarity_search(
+        query_text=query,
+        columns=["chunk_id","content","citation_label","page_number"],
+        num_results=5
+    )
+    chunks = []
+    for row in results.get("result",{}).get("data_array",[]):
+        chunks.append({
+            "content":        row[1] if len(row)>1 else "",
+            "citation_label": row[2] if len(row)>2 else "Unknown",
+            "page_number":    row[3] if len(row)>3 else ""
+        })
+    return chunks
+
+def ask(query):
+    chunks  = query_vector_search(query)
+    if not chunks:
+        return {"answer": "No relevant information found.", "citations": [], "latency_ms": 0}
+    context = "\n\n".join([
+        f"[Source: {c['citation_label']}]\n{c['content'][:500]}"
+        for c in chunks
+    ])
+    start   = time.time()
+    answer  = query_llm(query, context)
+    latency = int((time.time()-start)*1000)
+    import re
+    citations = re.findall(r"\[Source:([^\]]+)\]", answer)
+    return {"answer": answer, "citations": citations, "latency_ms": latency, "chunks": len(chunks)}
+
+# Sidebar
 with st.sidebar:
-    st.title("⚙️ Controls")
-    if not st.session_state.initialized:
-        if st.button("🚀 Initialize System", use_container_width=True):
-            with st.spinner("Loading… (2-3 min first time)"):
-                try:
-                    st.session_state.rag = load_rag()
-                    st.session_state.initialized = True
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ {e}")
-    else:
-        st.success("✅ System Online")
+    st.title("⚙️ CVIP RAG")
+    st.success("✅ System Ready")
     st.markdown("---")
     show_sources = st.checkbox("📚 Show Sources", value=True)
-    show_debug   = st.checkbox("🔍 Debug Info",   value=False)
     st.markdown("---")
     if st.button("🔄 New Chat", use_container_width=True):
-        if st.session_state.rag:
-            try: st.session_state.rag.cleanup(st.session_state.session_id)
-            except: pass
-        st.session_state.chat_history = []
-        st.session_state.session_id   = f"ui_{int(time.time())}"
+        st.session_state.chat_history=[]
+        st.session_state.session_id=f"ui_{int(time.time())}"
         st.rerun()
-    if st.session_state.initialized and st.session_state.rag:
-        st.markdown("---")
-        try:
-            s = st.session_state.rag.get_system_stats()
-            st.metric("Sessions", s.get("active_sessions",0))
-            st.metric("Uptime",   s.get("system_uptime","-"))
-        except: pass
+    st.markdown("---")
+    st.markdown("### 💡 Examples")
+    EXAMPLES=["What is edge detection?","How does Sobel work?",
+              "Explain CNNs","What are vision transformers?"]
+    for ex in EXAMPLES:
+        if st.button(ex, use_container_width=True):
+            st.session_state.pending=ex
+            st.rerun()
 
 st.markdown("# 🤖 CVIP RAG System")
 st.markdown("*Computer Vision & Image Processing Expert*")
 st.markdown("---")
-
-if not st.session_state.initialized:
-    st.info("👈 Click **Initialize System** in the sidebar to begin.")
-    st.stop()
-
-EXAMPLES=["What is edge detection?","How does Sobel work?",
-          "Explain CNNs","What are vision transformers?","Compare CNN vs traditional CV"]
-
-if not st.session_state.chat_history:
-    st.markdown("### 💡 Example Questions")
-    cols=st.columns(len(EXAMPLES))
-    for col,ex in zip(cols,EXAMPLES):
-        with col:
-            if st.button(ex, use_container_width=True):
-                st.session_state.pending=ex
-                st.rerun()
-    st.markdown("---")
 
 for entry in st.session_state.chat_history:
     with st.chat_message("user"):
@@ -88,21 +109,14 @@ for entry in st.session_state.chat_history:
         st.caption(entry["time"])
     with st.chat_message("assistant"):
         r=entry["response"]
-        st.markdown(f'<div class="answer-box">{r["answer"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="answer-box">{r["answer"]}</div>',unsafe_allow_html=True)
         if show_sources and r.get("citations"):
             with st.expander("📚 Sources"):
                 for i,c in enumerate(r["citations"],1):
-                    st.markdown(f'<div class="citation-box">{i}. {c}</div>', unsafe_allow_html=True)
-        if r["support_level"] not in ["memory_recall","out_of_domain","error"]:
-            c1,c2,c3=st.columns(3)
-            c1.metric("Support",    r["support_level"])
-            c2.metric("Confidence", f'{r["confidence"]:.1%}')
-            c3.metric("Latency",    f'{r["latency_ms"]}ms')
-        if show_debug:
-            with st.expander("🐛 Debug"):
-                st.json({"intent":r["query_classification"]["intent"],
-                         "chunks":len(r.get("retrieved_chunks",[])),
-                         "grounding":r.get("grounding_scores",{})})
+                    st.markdown(f'<div class="citation-box">{i}. {c}</div>',unsafe_allow_html=True)
+        c1,c2=st.columns(2)
+        c1.metric("Chunks Retrieved", r.get("chunks",0))
+        c2.metric("Latency", f'{r["latency_ms"]}ms')
 
 query=None
 if hasattr(st.session_state,"pending"):
@@ -117,11 +131,7 @@ if query:
     with st.chat_message("assistant"):
         with st.spinner("Thinking…"):
             try:
-                r=st.session_state.rag.ask(
-                    query=query,
-                    session_id=st.session_state.session_id,
-                    use_reranking=False
-                )
+                r=ask(query)
                 st.session_state.chat_history.append({
                     "query":query,"response":r,
                     "time":datetime.now().strftime("%I:%M %p")
