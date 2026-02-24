@@ -15,7 +15,7 @@ The CVIP RAG System is a production-grade question-answering system built on Dat
 - ✅ **Technical CVIP questions** with cited answers and page numbers
 - ✅ **General knowledge questions** answered via LLM
 - ✅ **Memory recall** — ask about any previous question naturally
-- ✅ **Out-of-domain detection** — rejects irrelevant queries gracefully
+- ✅ **Smart query routing** — CVIP questions with citations, general knowledge answered gracefully using LLM
 - ✅ **Session analytics** with detailed performance metrics
 
 ---
@@ -216,7 +216,7 @@ response = rag.ask("What is the capital of Andhra Pradesh?", session_id="demo")
 
 **Dhanush Kumar**  
 Final Year Project — Computer Vision & Image Processing  
-2025-2026
+2026-2027
 
 ---
 
