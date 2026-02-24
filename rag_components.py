@@ -1960,120 +1960,6 @@ print("✅ Configuration loaded")
 # COMMAND ----------
 
 # ============================================================
-# QUERY CLASSIFIER - Intent & Domain Detection
-# ============================================================
-
-class QueryClassifier:
-    """Classify queries by intent and domain relevance"""
-    
-    # Domain keywords (Computer Vision & Image Processing)
-    DOMAIN_KEYWORDS = {
-        'core': [
-            'image', 'pixel', 'computer vision', 'visual', 'picture',
-            'digital image', 'photograph', 'imaging', 'visual processing'
-        ],
-        'algorithms': [
-            'edge detection', 'sobel', 'canny', 'prewitt', 'laplacian',
-            'convolution', 'filter', 'gaussian', 'bilateral', 'median',
-            'threshold', 'adaptive', 'otsu', 'segmentation', 'watershed',
-            'grabcut', 'mean shift', 'region growing'
-        ],
-        'transforms': [
-            'fourier', 'fft', 'dft', 'frequency domain', 'spatial domain',
-            'wavelet', 'dct', 'hough transform', 'radon transform'
-        ],
-        'features': [
-            'sift', 'surf', 'orb', 'brief', 'fast', 'harris corner',
-            'feature detection', 'keypoint', 'descriptor', 'matching'
-        ],
-        'deep_learning': [
-            'cnn', 'convolutional neural', 'resnet', 'vgg', 'alexnet',
-            'inception', 'yolo', 'rcnn', 'mask rcnn', 'unet', 'fcn',
-            'vision transformer', 'vit', 'detr', 'segment anything', 'sam'
-        ],
-        'operations': [
-            'morphology', 'erosion', 'dilation', 'opening', 'closing',
-            'gradient', 'enhancement', 'histogram', 'equalization',
-            'noise reduction', 'denoising', 'restoration'
-        ]
-    }
-    
-    # Intent patterns
-    INTENT_PATTERNS = {
-        'foundational': [
-            r'\bwhat is\b', r'\bdefine\b', r'\bexplain\b', 
-            r'\bbasics?\b', r'\bfundamental', r'\bhow does.*work\b',
-            r'\bintroduction', r'\bmeaning of\b'
-        ],
-        'advanced': [
-            r'\bstate[- ]of[- ]the[- ]art\b', r'\bSOTA\b', 
-            r'\blatest\b', r'\brecent\b', r'\bcutting[- ]edge\b',
-            r'\bmodern\b', r'\b202[0-9]\b', r'\btransformer\b',
-            r'\battention mechanism\b', r'\bdiffusion model'
-        ],
-        'comparison': [
-            r'\bcompare\b', r'\bvs\.?\b', r'\bdifference between\b',
-            r'\bbetter\b', r'\badvantage\b', r'\bdisadvantage\b',
-            r'\bevolution of\b', r'\bwhich is better\b'
-        ],
-        'implementation': [
-            r'\bhow to implement\b', r'\bcode\b', r'\bpython\b',
-            r'\bopencv\b', r'\balgorithm steps\b', r'\bpseudocode\b'
-        ]
-    }
-    
-    @classmethod
-    def classify(cls, query: str) -> Dict:
-        """
-        Classify query by domain relevance and intent.
-        
-        Returns:
-            {
-                'is_domain_relevant': bool,
-                'intent': str,
-                'confidence': float,
-                'matched_keywords': List[str]
-            }
-        """
-        query_lower = query.lower()
-        
-        # Check domain relevance
-        matched_keywords = []
-        for category, keywords in cls.DOMAIN_KEYWORDS.items():
-            for keyword in keywords:
-                if keyword in query_lower:
-                    matched_keywords.append((category, keyword))
-        
-        is_domain_relevant = len(matched_keywords) > 0
-        
-        # Classify intent
-        intent = 'general'
-        intent_scores = {}
-        
-        for intent_type, patterns in cls.INTENT_PATTERNS.items():
-            score = sum(1 for pattern in patterns if re.search(pattern, query_lower))
-            if score > 0:
-                intent_scores[intent_type] = score
-        
-        if intent_scores:
-            intent = max(intent_scores, key=intent_scores.get)
-        
-        # Calculate confidence
-        confidence = min(len(matched_keywords) / 3.0, 1.0) if is_domain_relevant else 0.0
-        
-        return {
-            'is_domain_relevant': is_domain_relevant,
-            'intent': intent,
-            'confidence': confidence,
-            'matched_keywords': [kw for _, kw in matched_keywords[:5]]
-        }
-
-
-print("✅ Query Classifier ready")
-
-# COMMAND ----------
-
-# ============================================================
 # PRODUCTION RAG SYSTEM - ALL SECURITY & PERFORMANCE FIXES
 # ============================================================
 
@@ -3476,7 +3362,7 @@ class SecureConfig:
         self.LLM_MAX_TOKENS  = 800
         
         self.RETRIEVAL_TOP_K  = 15
-        self.FINAL_CONTEXT_K  = 5
+        self.FINAL_CONTEXT_K  = 7
         
         self.SCORING_WEIGHTS = {
             'foundational':    {'alpha': 0.6, 'beta': 0.4},
@@ -3486,8 +3372,8 @@ class SecureConfig:
             'general':         {'alpha': 0.7, 'beta': 0.3}
         }
         
-        self.MIN_SUPPORT_SCORE               = 0.6
-        self.HALLUCINATION_WARNING_THRESHOLD = 0.4
+        self.MIN_SUPPORT_SCORE               = 0.45  # was 0.6
+        self.HALLUCINATION_WARNING_THRESHOLD = 0.25  # was 0.4
         self.ENABLE_METADATA_CACHE           = True
         self.CACHE_TTL_SECONDS               = 3600
     
@@ -3661,13 +3547,29 @@ class QueryClassifier:
     """Classify queries by intent and domain relevance"""
     
     DOMAIN_KEYWORDS = {
-        'core':         ['image', 'pixel', 'computer vision', 'visual', 'picture', 'digital image'],
-        'algorithms':   ['edge detection', 'sobel', 'canny', 'convolution', 'filter', 'segmentation'],
-        'transforms':   ['fourier', 'fft', 'dft', 'frequency domain', 'wavelet'],
-        'features':     ['sift', 'surf', 'orb', 'feature detection', 'keypoint'],
-        'deep_learning':['cnn', 'neural', 'resnet', 'vgg', 'yolo', 'transformer', 'vit'],
-        'operations':   ['morphology', 'erosion', 'dilation', 'enhancement', 'histogram']
-    }
+    'core':         ['image', 'pixel', 'computer vision', 'visual', 'picture', 
+                     'digital image', 'intensity', 'gray level', 'spatial'],
+    'algorithms':   ['edge detection', 'sobel', 'canny', 'convolution', 'filter',
+                     'segmentation', 'thresholding', 'histogram', 'gradient'],
+    'transforms':   ['fourier', 'fft', 'dft', 'frequency domain', 'wavelet',
+                     'laplacian', 'transform', 'frequency'],
+    'features':     ['sift', 'surf', 'orb', 'feature detection', 'keypoint',
+                     'descriptor', 'harris', 'corner detection'],
+    'deep_learning':['cnn', 'neural', 'resnet', 'vgg', 'yolo', 'transformer',
+                     'vit', 'deep learning', 'convolutional', 'activation'],
+    'operations':   ['morphology', 'erosion', 'dilation', 'enhancement',
+                     'point operation', 'linear', 'nonlinear', 'spatial filtering'],
+    '3d_vision':    ['camera calibration', 'intrinsic', 'extrinsic', '3d reconstruction',
+                     'point cloud', 'stereo', 'depth', 'epipolar', 'homography',
+                     'perspective', 'projection'],
+    'geometry':     ['affine', 'geometric transformation', 'rotation', 'translation',
+                     'scaling', 'interpolation', 'resampling'],
+    'restoration':  ['noise', 'denoising', 'restoration', 'blur', 'deblur',
+                     'wiener', 'degradation'],
+    'compression':  ['compression', 'jpeg', 'encoding', 'huffman', 'quantization'],
+    'color':        ['color', 'rgb', 'hsv', 'hsi', 'chrominance', 'luminance',
+                     'color space', 'saturation']
+}
     
     INTENT_PATTERNS = {
         'foundational':    [r'\bwhat is\b', r'\bdefine\b', r'\bexplain\b', r'\bbasics?\b', r'\bfundamental'],
@@ -3713,51 +3615,83 @@ print("✅ QueryClassifier")
 
 class MemoryQueryDetector:
     MEMORY_PATTERNS = [
-        r'\bfirst\s+question\b', r'\bsecond\s+question\b', r'\bthird\s+question\b',
-        r'\blast\s+question\b',  r'\bprevious\s+question\b', r'\bearlier\s+question\b',
-        r'\b1st\s+question\b',   r'\b2nd\s+question\b',      r'\b3rd\s+question\b',
-        r'\bwhat\s+did\s+i\s+ask\b', r'\bmy\s+questions?\b', r'\bour\s+conversation\b',
-        r'\blist\s+(all\s+)?questions?\b', r'\bshow\s+(all\s+)?questions?\b'
+        # Ordinal + question patterns
+        r'\bfirst\s+question\b',    r'\bsecond\s+question\b',
+        r'\bthird\s+question\b',    r'\bfourth\s+question\b',
+        r'\bfifth\s+question\b',    r'\bsixth\s+question\b',
+        r'\bseventh\s+question\b',  r'\beighth\s+question\b',
+        r'\bninth\s+question\b',    r'\btenth\s+question\b',
+        r'\blast\s+question\b',     r'\bprevious\s+question\b',
+        r'\bearlier\s+question\b',
+        r'\b1st\s+question\b',      r'\b2nd\s+question\b',
+        r'\b3rd\s+question\b',      r'\b4th\s+question\b',
+        r'\b5th\s+question\b',      r'\b6th\s+question\b',
+        r'\b7th\s+question\b',      r'\b8th\s+question\b',
+        r'\b9th\s+question\b',      r'\b10th\s+question\b',
+        # General memory patterns
+        r'\bwhat\s+did\s+i\s+ask\b',
+        r'\bmy\s+questions?\b',
+        r'\bour\s+conversation\b',
+        r'\blist\s+(all\s+)?questions?\b',
+        r'\bshow\s+(all\s+)?questions?\b',
+        r'\ball\s+questions?\b',
+        r'\bquestions?\s+i\s+asked\b',
+        r'\bwhat\s+i\s+asked\b',
+        r'\bwhat\s+was\s+my\b',
+        r'\bwhat\s+were\s+my\b',
+        r'\brecall\b',
+        r'\bremember\s+my\b',
+        r'\bconversation\s+history\b',
+        r'\basked\s+before\b',
     ]
     
     @classmethod
     def is_memory_query(cls, query: str) -> bool:
         return any(re.search(p, query.lower()) for p in cls.MEMORY_PATTERNS)
-    
     @classmethod
     def extract_ordinal(cls, query: str) -> Optional[str]:
-        ordinals = ['first','second','third','fourth','fifth',
-                    '1st','2nd','3rd','4th','5th','last','previous','latest']
+        ordinals = [
+            'first', 'second', 'third', 'fourth', 'fifth',
+            'sixth', 'seventh', 'eighth', 'ninth', 'tenth',
+            '1st', '2nd', '3rd', '4th', '5th',
+            '6th', '7th', '8th', '9th', '10th',
+            'last', 'previous', 'latest'
+            ]
         query_lower = query.lower()
         return next((o for o in ordinals if o in query_lower), None)
 
-
+print("✅ MemoryQueryDetector")
 class MemoryResponseGenerator:
     @staticmethod
     def handle_memory_query(query: str, memory) -> str:
         if not memory.full_session_log:
             return "You haven't asked any questions yet in this conversation."
-        
+
         ordinal = MemoryQueryDetector.extract_ordinal(query)
         if ordinal:
             turn = memory.recall_by_ordinal(ordinal)
             if turn:
-                return (f"Your {ordinal} question was:\n\n\"{turn['query']}\"\n\n"
-                        f"My answer was:\n{turn['answer'][:300]}...")
+                return (
+                    f"Your {ordinal} question was:\n\n\"{turn['query']}\"\n\n"
+                    f"My answer was:\n{turn['answer'][:300]}..."
+                )
             return f"You haven't asked a {ordinal} question yet."
-        
+
         if any(w in query.lower() for w in ['list', 'all', 'show', 'summary']):
             lines = ["Here are all your questions in this session:\n"]
             for turn in memory.full_session_log:
-                lines.append(f"{turn['turn_number']}. {turn['query']}\n")
+                lines.append(f"{turn['turn_number']}. {turn['query']}")
             return "\n".join(lines)
-        
-        s = memory.get_session_summary()
-        return (f"You've asked {s['total_turns']} questions in this session.\n"
-                f"Domain-specific: {s['domain_queries']}\nGeneral: {s['general_queries']}")
 
-print("✅ MemoryQueryDetector")
-print("✅ MemoryResponseGenerator")
+        s = memory.get_session_summary()
+        return (
+            f"You've asked {s['total_turns']} questions in this session.\n"
+            f"Domain-specific: {s['domain_queries']}\n"
+            f"General: {s['general_queries']}"
+        )
+
+
+print("✅ MemoryResponseGenerator")   
 
 # ============================================================
 # 7. PRODUCTION MEMORY SYSTEM  (FIX 1: tiktoken logic fixed)
@@ -3833,17 +3767,25 @@ class ProductionMemorySystem:
     
     def recall_by_ordinal(self, ordinal: str) -> Optional[Dict]:
         ordinal_map = {
-            'first': 0, '1st': 0, 'second': 1, '2nd': 1,
-            'third': 2, '3rd': 2, 'fourth': 3, '4th': 3,
-            'fifth': 4, '5th': 4, 'last': -1, 'latest': -1, 'previous': -1
-        }
+           'first':   0, '1st': 0,
+           'second':  1, '2nd': 1,
+           'third':   2, '3rd': 2,
+           'fourth':  3, '4th': 3,
+           'fifth':   4, '5th': 4,
+           'sixth':   5, '6th': 5,
+           'seventh': 6, '7th': 6,
+           'eighth':  7, '8th': 7,
+           'ninth':   8, '9th': 8,
+           'tenth':   9, '10th': 9,
+           'last': -1, 'latest': -1, 'previous': -1
+       }
         index = ordinal_map.get(ordinal.lower())
         if index is None:
-            return None
+           return None
         try:
-            return self.full_session_log[index]
+           return self.full_session_log[index]
         except IndexError:
-            return None
+           return None
     
     def get_session_summary(self) -> Dict:
         duration = datetime.now() - self.session_start
@@ -3990,7 +3932,7 @@ class FixedAnswerGenerator:
         import requests
         
         context = "\n\n".join([
-            f"[Source: {c.get('citation_label', 'Unknown')}]\n{c['content'][:500]}"
+            f"[Source: {c.get('citation_label', 'Unknown')}]\n{c['content'][:400]}"
             for c in chunks[:5]
         ])
         
@@ -4008,12 +3950,19 @@ class FixedAnswerGenerator:
                 "messages": [
                     {
                         "role": "system",
-                        "content": (
-                            "You are an expert in Computer Vision and Image Processing. "
-                            "Answer ONLY using the provided context. "
-                            "Cite sources using [Source: name] format. "
-                            "If the context is insufficient, say so clearly."
-                        )
+"content": (
+    "You are an expert professor in Computer Vision and Image Processing. "
+    "Your answers should be comprehensive, well-structured, and educational. "
+    "Follow these guidelines:\n"
+    "1. Give detailed explanations with proper definitions\n"
+    "2. Always include a worked example when explaining algorithms or operations\n"
+    "3. Use mathematical notation where appropriate\n"
+    "4. Structure your answer with clear sections using markdown headers\n"
+    "5. Cite sources using [Source: name, p.X] format after each key point\n"
+    "6. If the context has insufficient detail, explain what you know from the context "
+    "and indicate where more detail would be needed\n"
+    "7. Aim for thorough, textbook-quality answers"
+)
                     },
                     {
                         "role": "user",
@@ -4334,8 +4283,11 @@ class FinalProductionRAG:
         logger.info("🚀 Initializing Final Production RAG System")
         logger.info("=" * 70)
         
-        self.enable_reranking  = enable_reranking
+        self.enable_reranking   = enable_reranking
         self.enable_persistence = enable_persistence
+        
+        # General knowledge answer cache — avoids repeated LLM calls
+        self._general_cache: Dict[str, str] = {}
         
         self._initialize_shared_components()
         
@@ -4349,14 +4301,14 @@ class FinalProductionRAG:
         )
         
         self.system_stats = {
-            'system_start':   datetime.now(),
-            'total_sessions': 0,
+            'system_start':    datetime.now(),
+            'total_sessions':  0,
             'active_sessions': 0
         }
         
         logger.info("=" * 70)
         logger.info("✅ System Ready!")
-        logger.info(f"   Reranking:  {'Enabled' if enable_reranking else 'Disabled'}")
+        logger.info(f"   Reranking:   {'Enabled' if enable_reranking else 'Disabled'}")
         logger.info(f"   Persistence: {'Enabled' if enable_persistence else 'Disabled'}")
         logger.info(f"   Flush Strategy: Every {flush_every_n} queries OR {flush_every_seconds}s")
         logger.info("=" * 70)
@@ -4372,7 +4324,6 @@ class FinalProductionRAG:
                 ttl_seconds=self.config.CACHE_TTL_SECONDS
             )
             
-            # FIX: pass catalog and schema from config
             logger.info("🔍 Initializing metadata fetcher...")
             self.metadata_fetcher = SafeMetadataFetcher(
                 self.metadata_cache,
@@ -4472,7 +4423,6 @@ class FinalProductionRAG:
         return OptimizedRetriever(index, self.metadata_fetcher, self.cross_encoder, self.config)
     
     def _get_or_create_session(self, session_id: str = None) -> SessionComponents:
-        # FIX: removed misplaced _OfflineTokenizer assignment
         if session_id is None:
             session_id = "default"
         
@@ -4486,44 +4436,59 @@ class FinalProductionRAG:
     
     def ask(self, query: str, session_id: str = None, use_reranking: bool = None) -> Dict:
         start_time = time.time()
-        
+
         if use_reranking is None:
             use_reranking = self.enable_reranking
-        
+
         session = self._get_or_create_session(session_id)
-        
+
         try:
             query_classification = QueryClassifier.classify(query)
-            query_classification['is_memory_query'] = MemoryQueryDetector.is_memory_query(query)
-            
+
+            # Bulletproof memory detection — catches any ordinal + "question" combo
+            is_memory = MemoryQueryDetector.is_memory_query(query)
+            if not is_memory:
+                ordinals = [
+                    'first','second','third','fourth','fifth',
+                    'sixth','seventh','eighth','ninth','tenth',
+                    '1st','2nd','3rd','4th','5th',
+                    '6th','7th','8th','9th','10th',
+                    'last','previous','latest'
+                ]
+                q_lower = query.lower()
+                if any(o in q_lower for o in ordinals) and 'question' in q_lower:
+                    is_memory = True
+
+            query_classification['is_memory_query'] = is_memory
+
             logger.info(
                 f"[{session_id}] Query: {query[:50]}... | "
                 f"Intent: {query_classification['intent']} | "
                 f"Domain: {query_classification['is_domain_relevant']}"
             )
-            
+
             if query_classification['is_memory_query']:
                 response = self._handle_memory_query(query, query_classification, session)
             elif query_classification['is_domain_relevant']:
                 response = self._handle_domain_query(query, query_classification, session, use_reranking)
             else:
-                response = self._handle_general_query(query, query_classification)
-            
+                response = self._handle_general_query(query, query_classification, session)
+
             latency_ms = int((time.time() - start_time) * 1000)
             response['latency_ms'] = latency_ms
-            
+
             session.update_health_stats(success=True, latency_ms=latency_ms)
             session.memory.add_turn(query, response['answer'], response)
             self._log_query(query, query_classification, response, session)
             self.flush_manager.increment_and_flush_if_needed()
-            
+
             return response
-        
+
         except Exception as e:
             logger.error(f"[{session_id}] Query processing failed: {e}", exc_info=True)
             latency_ms = int((time.time() - start_time) * 1000)
             session.update_health_stats(success=False, latency_ms=latency_ms)
-            
+
             error_response = self._create_error_response(
                 query,
                 query_classification if 'query_classification' in locals() else {},
@@ -4531,25 +4496,25 @@ class FinalProductionRAG:
                 latency_ms
             )
             session.memory.add_turn(query, error_response['answer'], error_response)
-            
+
             try:
                 self._log_query(query, query_classification, error_response, session)
                 self.flush_manager.increment_and_flush_if_needed()
             except Exception as log_err:
                 logger.error(f"Error logging failed: {log_err}")
-            
+
             return error_response
     
     def _handle_memory_query(self, query: str, classification: Dict, session: SessionComponents) -> Dict:
         answer = MemoryResponseGenerator.handle_memory_query(query, session.memory)
         return {
-            'answer':             answer,
-            'citations':          [],
-            'support_level':      'memory_recall',
-            'confidence':         1.0,
-            'retrieved_chunks':   [],
+            'answer':               answer,
+            'citations':            [],
+            'support_level':        'memory_recall',
+            'confidence':           1.0,
+            'retrieved_chunks':     [],
             'query_classification': classification,
-            'error':              None
+            'error':                None
         }
     
     def _handle_domain_query(
@@ -4564,55 +4529,113 @@ class FinalProductionRAG:
         
         if not retrieved_chunks:
             return {
-                'answer':             "I couldn't find relevant information in my knowledge base.",
-                'citations':          [],
-                'support_level':      'not_supported',
-                'confidence':         0.0,
-                'retrieved_chunks':   [],
+                'answer':               "I couldn't find relevant information in my knowledge base.",
+                'citations':            [],
+                'support_level':        'not_supported',
+                'confidence':           0.0,
+                'retrieved_chunks':     [],
                 'query_classification': classification,
-                'error':              None
+                'error':                None
             }
         
         generation_result = self.generator.generate(query, retrieved_chunks, classification)
         
         return {
-            'answer':             generation_result['answer'],
-            'citations':          generation_result['citations'],
-            'support_level':      generation_result['support_level'],
-            'confidence':         generation_result['confidence'],
-            'retrieved_chunks':   retrieved_chunks,
+            'answer':               generation_result['answer'],
+            'citations':            generation_result['citations'],
+            'support_level':        generation_result['support_level'],
+            'confidence':           generation_result['confidence'],
+            'retrieved_chunks':     retrieved_chunks,
             'query_classification': classification,
-            'grounding_scores':   generation_result.get('grounding_scores', {}),
-            'error':              generation_result.get('error')
+            'grounding_scores':     generation_result.get('grounding_scores', {}),
+            'error':                generation_result.get('error')
         }
     
-    def _handle_general_query(self, query: str, classification: Dict) -> Dict:
-        return {
-            'answer': (
+    def _handle_general_query(self, query: str, classification: Dict, session: SessionComponents) -> Dict:
+        """Handle general queries — routes adjacent CVIP topics to domain handler,
+        answers everything else via LLM general knowledge with caching."""
+        
+        # Route CVIP-adjacent queries to domain handler
+        adjacent_terms = ['image', 'vision', 'visual', 'pixel', 'camera', 'detection']
+        is_adjacent    = any(t in query.lower() for t in adjacent_terms)
+        if is_adjacent:
+            return self._handle_domain_query(query, classification, session, False)
+        
+        # Check general knowledge cache first
+        cache_key = query.lower().strip()
+        if cache_key in self._general_cache:
+            logger.info(f"Cache hit for general query: {query[:40]}")
+            return {
+                'answer':               self._general_cache[cache_key],
+                'citations':            [],
+                'support_level':        'general_knowledge',
+                'confidence':           0.8,
+                'retrieved_chunks':     [],
+                'query_classification': classification,
+                'error':                None
+            }
+        
+        try:
+            answer = self._answer_general_query(query)
+            self._general_cache[cache_key] = answer  # Cache for future
+        except Exception:
+            answer = (
                 "I'm specialized in Computer Vision and Image Processing. "
                 "Please ask about topics like CNNs, edge detection, segmentation, "
                 "or computer vision algorithms."
-            ),
-            'citations':          [],
-            'support_level':      'out_of_domain',
-            'confidence':         0.0,
-            'retrieved_chunks':   [],
+            )
+        
+        return {
+            'answer':               answer,
+            'citations':            [],
+            'support_level':        'general_knowledge',
+            'confidence':           0.8,
+            'retrieved_chunks':     [],
             'query_classification': classification,
-            'error':              None
+            'error':                None
         }
+    
+    def _answer_general_query(self, query: str) -> str:
+        """Direct LLM call for general knowledge — 400 tokens max for speed."""
+        import requests
+        token = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiToken().get()
+        r = requests.post(
+            f"{self.config.WORKSPACE_URL}/serving-endpoints/{self.config.LLM_ENDPOINT}/invocations",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a knowledgeable assistant. Answer the user's question "
+                            "clearly and accurately. For factual questions, provide precise "
+                            "information. For technical questions, give detailed explanations "
+                            "with examples where helpful."
+                        )
+                    },
+                    {"role": "user", "content": query}
+                ],
+                "max_tokens": 400,
+                "temperature": 0.3,
+                "stream": False
+            },
+            timeout=120
+        )
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"]
     
     def _create_error_response(
         self, query: str, classification: Dict, error_msg: str, latency_ms: int
     ) -> Dict:
         return {
-            'answer':             "I encountered an error. Please try rephrasing your question.",
-            'citations':          [],
-            'support_level':      'error',
-            'confidence':         0.0,
-            'retrieved_chunks':   [],
+            'answer':               "I encountered an error. Please try rephrasing your question.",
+            'citations':            [],
+            'support_level':        'error',
+            'confidence':           0.0,
+            'retrieved_chunks':     [],
             'query_classification': classification,
-            'latency_ms':         latency_ms,
-            'error':              error_msg
+            'latency_ms':           latency_ms,
+            'error':                error_msg
         }
     
     def _log_query(
@@ -4652,17 +4675,18 @@ class FinalProductionRAG:
         print(f"   Latency: {response.get('latency_ms', 0)} ms")
         
         if response.get('error'):
-            print(f"\n⚠️ ERROR: {response['error']}")
+            print(f"\n⚠️  ERROR: {response['error']}")
         
         print("=" * 70)
     
     def get_system_stats(self) -> Dict:
         uptime = datetime.now() - self.system_stats['system_start']
         return {
-            'system_uptime':  str(uptime).split('.')[0],
-            'total_sessions': self.system_stats['total_sessions'],
-            'active_sessions': self.system_stats['active_sessions'],
-            'cache_stats':    self.metadata_cache.get_stats()
+            'system_uptime':      str(uptime).split('.')[0],
+            'total_sessions':     self.system_stats['total_sessions'],
+            'active_sessions':    self.system_stats['active_sessions'],
+            'cache_stats':        self.metadata_cache.get_stats(),
+            'general_cache_size': len(self._general_cache)
         }
     
     def get_session_summary(self, session_id: str = None) -> Dict:
@@ -4686,10 +4710,11 @@ class FinalProductionRAG:
 
 
 print("✅ FinalProductionRAG ready")
-print("   ✔ catalog/schema passed to SafeMetadataFetcher")
-print("   ✔ misplaced tokenizer assignment removed")
-print("   ✔ thread-safe session management")
-print("   ✔ full error logging on all paths")
+print("   ✔ General knowledge cache — repeated queries return instantly")
+print("   ✔ CVIP-adjacent queries routed to domain handler automatically")
+print("   ✔ max_tokens=400 for general queries — faster responses")
+print("   ✔ session passed correctly to _handle_general_query")
+print("   ✔ all syntax errors fixed")
 
 # COMMAND ----------
 
@@ -4708,194 +4733,6 @@ import os
 print("HOST set:", bool(os.getenv("DATABRICKS_HOST")))
 print("TOKEN set:", bool(os.getenv("DATABRICKS_TOKEN")))
 
-
-# COMMAND ----------
-
-# ============================================================
-# REAL LLM ANSWER GENERATOR - DATABRICKS INTEGRATION
-# ============================================================
-%pip install databricks-genai-inference
-from databricks_genai_inference import ChatSession
-
-class RealAnswerGenerator:
-    """
-    Production answer generator using Databricks Foundation Models.
-    Replaces the mock generator with real LLM integration.
-    """
-    
-    def __init__(self, config):
-        self.config = config
-        self.llm = None
-        self._initialize_llm()
-    
-    def _initialize_llm(self):
-        """Initialize Databricks LLM"""
-        try:
-            current_date = datetime.now().strftime("%B %d, %Y")
-            system_prompt = self._get_system_prompt(current_date)
-            
-            # Initialize Databricks Chat Session
-            self.llm = ChatSession(
-                model=self.config.LLM_ENDPOINT,
-                system_message=system_prompt,
-                max_tokens=self.config.LLM_MAX_TOKENS,
-                temperature=self.config.LLM_TEMPERATURE
-            )
-            
-            logger.info(f"✅ Real LLM initialized: {self.config.LLM_ENDPOINT}")
-            
-        except ImportError as e:
-            logger.error("databricks_genai_inference not available")
-            raise RuntimeError(
-                "databricks_genai_inference package required. "
-                "Install with: pip install databricks-genai-inference"
-            )
-        except Exception as e:
-            logger.error(f"LLM initialization failed: {e}")
-            raise RuntimeError(f"Failed to initialize LLM: {e}")
-    
-    def _get_system_prompt(self, current_date: str) -> str:
-        """System prompt for LLM"""
-        return f"""You are an expert AI assistant specializing in Computer Vision and Image Processing.
-
-Current Date: {current_date}
-
-CRITICAL RULES:
-1. Answer ONLY using information from the provided CONTEXT
-2. If the context doesn't contain the answer, say "I don't have enough information in my knowledge base to answer this question."
-3. Always cite your sources using the provided citation labels
-4. Be precise and technical when appropriate
-5. Never make up information or speculate beyond the context
-6. Do not mention knowledge cutoffs or limitations unless directly relevant
-
-When answering:
-- Start with a direct, clear answer
-- Provide technical details and explanations from the context
-- Include relevant equations, algorithms, or formulas if mentioned in context
-- Cite sources using format: [Source: <citation_label>]
-- If multiple sources support your answer, cite all relevant ones
-
-Remember: Accuracy and groundedness are more important than comprehensiveness. If unsure, say so."""
-    
-    def generate(
-        self,
-        query: str,
-        retrieved_chunks: List[Dict],
-        query_classification: Dict
-    ) -> Dict:
-        """Generate answer using real LLM"""
-        
-        if not retrieved_chunks:
-            return {
-                'answer': "I couldn't find relevant information in my knowledge base to answer this question.",
-                'citations': [],
-                'support_level': 'not_supported',
-                'confidence': 0.0,
-                'used_chunks': [],
-                'grounding_scores': {},
-                'error': None
-            }
-        
-        # Build context
-        context = self._build_context(retrieved_chunks)
-        
-        # Create prompt
-        prompt = self._create_prompt(query, context, query_classification)
-        
-        # Generate with retry logic
-        max_retries = 2
-        for attempt in range(max_retries):
-            try:
-                response = self.llm.reply(prompt)
-                
-                # Handle different response formats
-                if isinstance(response, dict):
-                    answer_text = response.get('message', str(response))
-                else:
-                    answer_text = str(response)
-                
-                break
-                
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    logger.warning(f"Generation attempt {attempt + 1} failed, retrying...")
-                    time.sleep(1)
-                    continue
-                else:
-                    logger.error(f"Generation failed after {max_retries} attempts: {e}")
-                    return {
-                        'answer': "I encountered an error generating the answer. Please try rephrasing your question.",
-                        'citations': [],
-                        'support_level': 'not_supported',
-                        'confidence': 0.0,
-                        'used_chunks': [],
-                        'grounding_scores': {},
-                        'error': str(e)
-                    }
-        
-        # Verify grounding
-        grounding_result = ImprovedGroundingChecker.verify_grounding(
-            answer_text,
-            retrieved_chunks,
-            query,
-            self.config
-        )
-        
-        return {
-            'answer': answer_text,
-            'citations': grounding_result['citations'],
-            'support_level': grounding_result['support_level'],
-            'confidence': grounding_result['confidence'],
-            'used_chunks': grounding_result['used_chunk_ids'],
-            'grounding_scores': grounding_result['scores'],
-            'error': None
-        }
-    
-    def _build_context(self, chunks: List[Dict]) -> str:
-        """Build formatted context from chunks"""
-        context_parts = []
-        
-        for i, chunk in enumerate(chunks, 1):
-            context_parts.append(
-                f"[SOURCE {i}] {chunk['citation_label']}\n"
-                f"Content: {chunk['content']}\n"
-            )
-        
-        return "\n---\n".join(context_parts)
-    
-    def _create_prompt(
-        self,
-        query: str,
-        context: str,
-        query_classification: Dict
-    ) -> str:
-        """Create well-structured prompt"""
-        
-        prompt = f"""CONTEXT (from trusted Computer Vision and Image Processing sources):
-
-{context}
-
----
-
-USER QUESTION: {query}
-
-INSTRUCTIONS:
-- Answer using ONLY the information from the CONTEXT above
-- Be technically accurate and detailed
-- Cite sources using [Source: <citation>] format
-- If information is not in the context, explicitly state: "I don't have this information in my knowledge base"
-- Do not make assumptions or speculate
-
-YOUR ANSWER:"""
-        
-        return prompt
-
-
-# Replace the mock generator
-FixedAnswerGenerator = RealAnswerGenerator
-
-print("✅ Real LLM Answer Generator loaded")
-print("🔄 Mock generator replaced with production LLM integration")
 
 # COMMAND ----------
 
@@ -4951,28 +4788,6 @@ except Exception as e:
     print(f"\n❌ Test failed: {e}")
     import traceback
     traceback.print_exc()
-
-# COMMAND ----------
-
-test_queries = [
-    "How does the Sobel operator work?",
-    "Compare CNN and traditional computer vision",
-    "What are vision transformers?",
-    "What was my first question?"  # Memory test
-]
-
-print("🧪 Running comprehensive tests...")
-
-for i, query in enumerate(test_queries, 1):
-    print(f"\n{'='*70}")
-    print(f"Test {i}: {query}")
-    response = rag.ask(query=query, session_id="test_session")
-    print(f"Support:    {response['support_level']}")
-    print(f"Confidence: {response['confidence']:.1%}")
-    print(f"Latency:    {response['latency_ms']}ms")
-    print(f"\nAnswer:\n{response['answer']}")  # full answer, no truncation
-    if response.get('citations'):
-        print(f"\nSources: {', '.join(response['citations'][:3])}")
 
 # COMMAND ----------
 
@@ -5592,3 +5407,776 @@ print("\n🎉 All done! Now go to cvip-rag app → Deploy")
 
 # COMMAND ----------
 
+import requests, base64
+
+GITHUB_TOKEN = "GITHUB_TOKEN_REMOVED"
+REPO   = "Dhanushhuu/Dhanush-demo"
+BRANCH = "main"
+
+# Get existing SHA first
+r = requests.get(
+    f"https://api.github.com/repos/{REPO}/contents/rag_components.py",
+    headers={"Authorization": f"token {GITHUB_TOKEN}"}
+)
+print(f"Existing file check: {r.status_code}")
+sha = r.json().get("sha") if r.status_code == 200 else None
+print(f"SHA: {sha}")
+
+# Read and encode
+with open("/tmp/cvip_app/rag_components.py", "rb") as f:
+    content = base64.b64encode(f.read()).decode()
+
+print(f"Content size: {len(content)} chars")
+
+# Push with SHA
+payload = {
+    "message": "Add rag_components.py",
+    "content": content,
+    "branch":  BRANCH
+}
+if sha:
+    payload["sha"] = sha
+
+r = requests.put(
+    f"https://api.github.com/repos/{REPO}/contents/rag_components.py",
+    headers={
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Content-Type":  "application/json"
+    },
+    json=payload,
+    timeout=120  # large file needs more time
+)
+print(f"{'✅' if r.status_code in [200,201] else '❌'} rag_components.py: {r.status_code}")
+if r.status_code not in [200, 201]:
+    print(r.text[:300])
+
+# COMMAND ----------
+
+import re, requests, base64
+
+GITHUB_TOKEN = "GITHUB_TOKEN_REMOVED"
+REPO   = "Dhanushhuu/Dhanush-demo"
+BRANCH = "main"
+
+# Read and scrub secrets from rag_components.py
+with open("/tmp/cvip_app/rag_components.py", "r") as f:
+    source = f.read()
+
+# Remove any hardcoded tokens/URLs that GitHub flags
+source = re.sub(r'dapi[a-zA-Z0-9]{32,}', 'DATABRICKS_TOKEN_REMOVED', source)
+source = re.sub(r'https://dbc-[a-zA-Z0-9\-]+\.cloud\.databricks\.com', 
+                'https://YOUR_WORKSPACE.cloud.databricks.com', source)
+
+# Save scrubbed version
+with open("/tmp/cvip_app/rag_components_clean.py", "w") as f:
+    f.write(source)
+print(f"✅ Scrubbed file: {len(source)} chars")
+
+# Push clean version
+content = base64.b64encode(source.encode()).decode()
+r = requests.put(
+    f"https://api.github.com/repos/{REPO}/contents/rag_components.py",
+    headers={"Authorization": f"token {GITHUB_TOKEN}"},
+    json={
+        "message": "Add rag_components.py (secrets removed)",
+        "content": content,
+        "branch":  BRANCH
+    },
+    timeout=120
+)
+print(f"{'✅' if r.status_code in [200,201] else '❌'} rag_components.py: {r.status_code}")
+if r.status_code not in [200, 201]:
+    print(r.text[:300])
+
+# COMMAND ----------
+
+import re, requests, base64
+
+GITHUB_TOKEN = "GITHUB_TOKEN_REMOVED"
+REPO   = "Dhanushhuu/Dhanush-demo"
+BRANCH = "main"
+
+with open("/tmp/cvip_app/rag_components.py", "r") as f:
+    source = f.read()
+
+# Remove ALL patterns GitHub flags
+patterns = [
+    (r'dapi[a-zA-Z0-9]{32,}',                          'DATABRICKS_TOKEN_REMOVED'),
+    (r'ghp_[a-zA-Z0-9]{36,}',                          'GITHUB_TOKEN_REMOVED'),
+    (r'github_pat_[a-zA-Z0-9_]{80,}',                  'GITHUB_TOKEN_REMOVED'),
+    (r'https://dbc-[a-zA-Z0-9\-]+\.cloud\.databricks\.com', 'https://YOUR_WORKSPACE.cloud.databricks.com'),
+    (r'[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}', 'UUID_REMOVED'),
+]
+
+for pattern, replacement in patterns:
+    matches = re.findall(pattern, source)
+    if matches:
+        print(f"Found {len(matches)} matches for: {pattern[:40]}")
+        print(f"  Example: {matches[0][:60]}")
+    source = re.sub(pattern, replacement, source)
+
+# Also find anything that looks like a token GitHub might flag
+suspicious = re.findall(r'["\']([A-Za-z0-9_\-]{40,})["\']', source)
+for s in suspicious[:10]:
+    print(f"⚠️  Possible secret: {s[:30]}...")
+
+with open("/tmp/cvip_app/rag_components_clean.py", "w") as f:
+    f.write(source)
+print(f"\n✅ Cleaned file: {len(source)} chars")
+
+# Push
+content = base64.b64encode(source.encode()).decode()
+r = requests.put(
+    f"https://api.github.com/repos/{REPO}/contents/rag_components.py",
+    headers={"Authorization": f"token {GITHUB_TOKEN}"},
+    json={
+        "message": "Add rag_components (all secrets removed)",
+        "content": content,
+        "branch":  BRANCH
+    },
+    timeout=120
+)
+print(f"{'✅' if r.status_code in [200,201] else '❌'} rag_components.py: {r.status_code}")
+if r.status_code not in [200, 201]:
+    print(r.text[:500])
+
+# COMMAND ----------
+
+import getpass
+GITHUB_TOKEN = getpass.getpass("GITHUB_TOKEN_REMOVED ")  # hidden input, not saved in cell
+
+# COMMAND ----------
+
+import requests, base64
+
+# This creates a text input widget — token never touches the cell code
+token_widget = dbutils.widgets.text("github_token", "", "Paste GitHub Token")
+
+# COMMAND ----------
+
+dbutils.widgets.get("github_token")
+
+# COMMAND ----------
+
+import requests, base64, getpass
+
+GITHUB_TOKEN = getpass.getpass("New token: ")
+REPO   = "Dhanushhuu/Dhanush-demo"
+BRANCH = "main"
+
+requirements = """streamlit>=1.28.0
+databricks-vectorsearch>=0.22
+databricks-sdk>=0.12.0
+mlflow>=2.9.0
+pyspark>=3.4.0
+openai>=1.0.0
+requests>=2.31.0
+"""
+
+content = base64.b64encode(requirements.encode()).decode()
+r = requests.put(
+    f"https://api.github.com/repos/{REPO}/contents/requirements.txt",
+    headers={"Authorization": f"token {GITHUB_TOKEN}"},
+    json={
+        "message": "Add requirements.txt",
+        "content": content,
+        "branch":  BRANCH
+    }
+)
+print(f"{'✅' if r.status_code in [200,201] else '❌'} requirements.txt: {r.status_code}")
+
+# COMMAND ----------
+
+# Check what the app sees when it tries to load
+import subprocess
+result = subprocess.run(
+    ["pip", "show", "streamlit"],
+    capture_output=True, text=True
+)
+print(result.stdout)
+
+# COMMAND ----------
+
+import requests, base64, getpass
+
+GITHUB_TOKEN = getpass.getpass("Token: ")
+REPO   = "Dhanushhuu/Dhanush-demo"
+BRANCH = "main"
+
+app_code = '''
+import streamlit as st
+import requests
+import time
+import os
+from datetime import datetime
+
+st.set_page_config(page_title="CVIP RAG", page_icon="🤖", layout="wide")
+st.markdown("""<style>
+.answer-box{background:#f5f7fa;padding:1.5rem;border-radius:12px;
+border-left:5px solid #1E88E5;margin:1rem 0;line-height:1.7;}
+.citation-box{background:#fff9e6;padding:.75rem;border-radius:8px;
+border-left:3px solid #ffc107;margin:.3rem 0;font-size:.9rem;}
+</style>""", unsafe_allow_html=True)
+
+if "chat_history" not in st.session_state: st.session_state.chat_history=[]
+if "session_id"   not in st.session_state: st.session_state.session_id=f"ui_{int(time.time())}"
+
+DATABRICKS_HOST  = os.environ.get("DATABRICKS_HOST",  "https://YOUR_WORKSPACE.cloud.databricks.com")
+DATABRICKS_TOKEN = os.environ.get("DATABRICKS_TOKEN", "")
+LLM_ENDPOINT     = "databricks-meta-llama-3-3-70b-instruct"
+VECTOR_INDEX     = "workspace.default.cvip_chunks_vs_index"
+VECTOR_ENDPOINT  = "cvip_endpoint"
+
+def query_llm(query, context):
+    import mlflow.deployments
+    client = mlflow.deployments.get_deploy_client("databricks")
+    response = client.predict(
+        endpoint=LLM_ENDPOINT,
+        inputs={
+            "messages": [
+                {"role": "system", "content": (
+                    "You are an expert in Computer Vision and Image Processing. "
+                    "Answer ONLY using the provided context. "
+                    "Cite sources using [Source: name] format."
+                )},
+                {"role": "user", "content": f"Context:\\n{context}\\n\\nQuestion: {query}"}
+            ],
+            "max_tokens": 800,
+            "temperature": 0.1,
+            "stream": False
+        }
+    )
+    return response["choices"][0]["message"]["content"]
+
+def query_vector_search(query):
+    from databricks.vector_search.client import VectorSearchClient
+    vsc   = VectorSearchClient()
+    index = vsc.get_index(
+        endpoint_name=VECTOR_ENDPOINT,
+        index_name=VECTOR_INDEX
+    )
+    results = index.similarity_search(
+        query_text=query,
+        columns=["chunk_id","content","citation_label","page_number"],
+        num_results=5
+    )
+    chunks = []
+    for row in results.get("result",{}).get("data_array",[]):
+        chunks.append({
+            "content":        row[1] if len(row)>1 else "",
+            "citation_label": row[2] if len(row)>2 else "Unknown",
+            "page_number":    row[3] if len(row)>3 else ""
+        })
+    return chunks
+
+def ask(query):
+    chunks  = query_vector_search(query)
+    if not chunks:
+        return {"answer": "No relevant information found.", "citations": [], "latency_ms": 0}
+    context = "\\n\\n".join([
+        f"[Source: {c['citation_label']}]\\n{c['content'][:500]}"
+        for c in chunks
+    ])
+    start   = time.time()
+    answer  = query_llm(query, context)
+    latency = int((time.time()-start)*1000)
+    import re
+    citations = re.findall(r"\\[Source:([^\\]]+)\\]", answer)
+    return {"answer": answer, "citations": citations, "latency_ms": latency, "chunks": len(chunks)}
+
+# Sidebar
+with st.sidebar:
+    st.title("⚙️ CVIP RAG")
+    st.success("✅ System Ready")
+    st.markdown("---")
+    show_sources = st.checkbox("📚 Show Sources", value=True)
+    st.markdown("---")
+    if st.button("🔄 New Chat", use_container_width=True):
+        st.session_state.chat_history=[]
+        st.session_state.session_id=f"ui_{int(time.time())}"
+        st.rerun()
+    st.markdown("---")
+    st.markdown("### 💡 Examples")
+    EXAMPLES=["What is edge detection?","How does Sobel work?",
+              "Explain CNNs","What are vision transformers?"]
+    for ex in EXAMPLES:
+        if st.button(ex, use_container_width=True):
+            st.session_state.pending=ex
+            st.rerun()
+
+st.markdown("# 🤖 CVIP RAG System")
+st.markdown("*Computer Vision & Image Processing Expert*")
+st.markdown("---")
+
+for entry in st.session_state.chat_history:
+    with st.chat_message("user"):
+        st.markdown(entry["query"])
+        st.caption(entry["time"])
+    with st.chat_message("assistant"):
+        r=entry["response"]
+        st.markdown(f\'<div class="answer-box">{r["answer"]}</div>\',unsafe_allow_html=True)
+        if show_sources and r.get("citations"):
+            with st.expander("📚 Sources"):
+                for i,c in enumerate(r["citations"],1):
+                    st.markdown(f\'<div class="citation-box">{i}. {c}</div>\',unsafe_allow_html=True)
+        c1,c2=st.columns(2)
+        c1.metric("Chunks Retrieved", r.get("chunks",0))
+        c2.metric("Latency", f\'{r["latency_ms"]}ms\')
+
+query=None
+if hasattr(st.session_state,"pending"):
+    query=st.session_state.pending
+    del st.session_state.pending
+else:
+    query=st.chat_input("Ask about Computer Vision or Image Processing…")
+
+if query:
+    with st.chat_message("user"):
+        st.markdown(query)
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking…"):
+            try:
+                r=ask(query)
+                st.session_state.chat_history.append({
+                    "query":query,"response":r,
+                    "time":datetime.now().strftime("%I:%M %p")
+                })
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ {e}")
+
+st.markdown("---")
+st.caption("🤖 CVIP RAG | Databricks Vector Search + LLaMA 3.3 70B")
+'''
+
+# Push to GitHub
+def push(filename, content):
+    r = requests.get(
+        f"https://api.github.com/repos/{REPO}/contents/{filename}",
+        headers={"Authorization": f"token {GITHUB_TOKEN}"}
+    )
+    sha = r.json().get("sha") if r.status_code==200 else None
+    payload = {"message": f"Update {filename}", 
+               "content": base64.b64encode(content.encode()).decode(),
+               "branch": BRANCH}
+    if sha: payload["sha"] = sha
+    r = requests.put(
+        f"https://api.github.com/repos/{REPO}/contents/{filename}",
+        headers={"Authorization": f"token {GITHUB_TOKEN}"},
+        json=payload, timeout=30
+    )
+    print(f"{'✅' if r.status_code in [200,201] else '❌'} {filename}: {r.status_code}")
+
+push("app.py", app_code)
+
+# Minimal requirements — no pyspark (provided by Databricks runtime)
+push("requirements.txt", """streamlit>=1.28.0
+databricks-vectorsearch>=0.22
+mlflow>=2.9.0
+""")
+
+print("\n✅ Done — go to cvip-rag app and Deploy again")
+
+# COMMAND ----------
+
+import requests
+
+token = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiToken().get()
+host  = "https://YOUR_WORKSPACE.cloud.databricks.com"
+
+r = requests.get(
+    f"{host}/api/2.0/apps/cvip-rag",
+    headers={"Authorization": f"Bearer {token}"}
+)
+import json
+print(json.dumps(r.json(), indent=2))
+
+# COMMAND ----------
+
+token = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiToken().get()
+host  = "https://YOUR_WORKSPACE.cloud.databricks.com"
+
+import requests
+
+# Create secret scope
+r = requests.post(
+    f"{host}/api/2.0/secrets/scopes/create",
+    headers={"Authorization": f"Bearer {token}"},
+    json={"scope": "cvip-rag-scope"}
+)
+print(f"Create scope: {r.status_code} {r.text}")
+
+# Add Databricks token as secret
+r = requests.post(
+    f"{host}/api/2.0/secrets/put",
+    headers={"Authorization": f"Bearer {token}"},
+    json={
+        "scope": "cvip-rag-scope",
+        "key":   "DATABRICKS_TOKEN",
+        "string_value": token  # uses current session token
+    }
+)
+print(f"Add secret: {r.status_code} {r.text}")
+
+print("\n✅ Done — now in the Authorization tab:")
+print("   Scope: cvip-rag-scope")
+print("   Key:   DATABRICKS_TOKEN")
+
+# COMMAND ----------
+
+# ============================================================
+# CHECK DATABRICKS APP STATUS
+# ============================================================
+
+from databricks.sdk import WorkspaceClient
+
+print("🔍 Checking Databricks App status...")
+print("=" * 70)
+
+try:
+    w = WorkspaceClient()
+    
+    # List all apps
+    apps = w.apps.list()
+    
+    print("\n📱 Your Databricks Apps:")
+    for app in apps:
+        print(f"\n   Name: {app.name}")
+        print(f"   Status: {app.status.state if hasattr(app, 'status') else 'Unknown'}")
+        print(f"   URL: {app.url if hasattr(app, 'url') else 'N/A'}")
+        
+        # Check for cvip-rag app specifically
+        if 'cvip' in app.name.lower():
+            print(f"\n   🎯 Found your CVIP RAG app!")
+            print(f"   Status: {app.status}")
+            
+            if hasattr(app.status, 'message'):
+                print(f"   Message: {app.status.message}")
+    
+except Exception as e:
+    print(f"❌ Could not check app status: {e}")
+    print("\n💡 The app might still be deploying...")
+
+print("\n" + "=" * 70)
+
+# COMMAND ----------
+
+import os
+os.environ["DATABRICKS_HOST"] = "https://YOUR_WORKSPACE.cloud.databricks.com"
+
+rag = FinalProductionRAG(
+    enable_reranking=False,
+    enable_persistence=True,
+    flush_every_n=3,
+    flush_every_seconds=30
+)
+
+print("✅ rag is ready!")
+
+# COMMAND ----------
+
+# ============================================================
+# CVIP RAG - INTERACTIVE DEMO + MAIN LAUNCHER
+# ============================================================
+import time
+
+# ============================================================
+# ANALYTICS & FAREWELL FUNCTIONS
+# ============================================================
+
+def get_session_analytics(session_id="interactive_demo"):
+    summary = rag.get_session_summary(session_id)
+    session = rag.sessions.get(session_id)
+    
+    avg_latency = 0
+    if session:
+        avg_latency = session.health_stats.get('avg_latency', 0) / 1000
+    
+    total    = summary.get('total_turns', 0)
+    domain   = summary.get('domain_queries', 0)
+    memory   = summary.get('memory_queries', 0)
+    ood      = total - domain - memory
+    duration = summary.get('session_duration', '0:00:00')
+    
+    cited = 0
+    if session:
+        cited = sum(
+            1 for t in session.memory.full_session_log
+            if t.get('metadata', {}).get('citations')
+        )
+    citation_rate = round(cited / max(domain, 1) * 100, 1) if domain > 0 else 0
+    
+    return {
+        'total_questions':         total,
+        'domain_questions':        domain,
+        'memory_questions':        memory,
+        'out_of_domain_questions': ood,
+        'avg_processing_time':     round(avg_latency, 2),
+        'citation_rate':           citation_rate,
+        'session_duration':        duration
+    }
+
+
+def display_farewell_summary(session_id="interactive_demo"):
+    analytics = get_session_analytics(session_id)
+    
+    print("\n" + "🎓" * 25)
+    print("     THANK YOU FOR USING THE CVIP RAG SYSTEM!")
+    print("🎓" * 25)
+    
+    print(f"\n📊 SESSION ANALYTICS")
+    print("=" * 60)
+    print(f"🕒 Duration         : {analytics['session_duration']}")
+    print(f"❓ Total Questions  : {analytics['total_questions']}")
+    print(f"🔬 Domain Questions : {analytics['domain_questions']}")
+    print(f"🧠 Memory Questions : {analytics['memory_questions']}")
+    print(f"⚠️  Out-of-Domain   : {analytics['out_of_domain_questions']}")
+    print(f"⚡ Avg Response Time: {analytics['avg_processing_time']}s")
+    print(f"📚 Citation Rate    : {analytics['citation_rate']}%")
+    
+    session = rag.sessions.get(session_id)
+    if session and session.memory.full_session_log:
+        print(f"\n📝 YOUR QUESTIONS:")
+        print("=" * 60)
+        for t in session.memory.full_session_log:
+            qc = t.get('metadata', {}).get('query_classification', {})
+            if qc.get('is_memory_query'):
+                icon = "🧠"
+            elif qc.get('is_domain_relevant'):
+                icon = "🔬"
+            else:
+                icon = "⚠️ "
+            print(f"  {t['turn_number']:2}. {icon} {t['query']}")
+    
+    print(f"\n🎯 SESSION INSIGHTS:")
+    print("=" * 40)
+    t = analytics['avg_processing_time']
+    if t < 2:   print("  ⚡ Excellent response times!")
+    elif t < 5: print("  ⏱️  Good performance maintained")
+    else:       print("  🐌 Response times were high — likely LLM latency")
+    
+    cr = analytics['citation_rate']
+    if cr > 80:   print("  📚 High-quality citations provided")
+    elif cr > 50: print("  📚 Good source attribution")
+    else:         print("  📚 Try more specific CVIP questions for better citations")
+    
+    if analytics['domain_questions'] > analytics['out_of_domain_questions']:
+        print("  🎯 Great focus on relevant CVIP topics!")
+    
+    print(f"\n🌟 FINAL MESSAGE:")
+    print("=" * 30)
+    n = analytics['total_questions']
+    if n >= 8:   print("  🏆 Outstanding engagement with the system!")
+    elif n >= 4: print("  👍 Good exploration of the topics!")
+    else:        print("  🌱 Thanks for trying the system!")
+    
+    print("  🔬 Keep exploring Image Processing and Computer Vision!")
+    print("  📚 Knowledge base: 10,097 chunks | Textbooks + Papers")
+    print(f"\n👋 Goodbye and happy learning!")
+    print("🎓" * 25)
+
+
+def display_realtime_stats(session_id="interactive_demo"):
+    analytics = get_session_analytics(session_id)
+    print(f"\n📊 REAL-TIME STATS:")
+    print(f"  Questions  : {analytics['total_questions']}")
+    print(f"  Domain     : {analytics['domain_questions']}")
+    print(f"  Memory     : {analytics['memory_questions']}")
+    print(f"  Out-Domain : {analytics['out_of_domain_questions']}")
+    print(f"  Avg Time   : {analytics['avg_processing_time']}s")
+    print(f"  Citations  : {analytics['citation_rate']}%")
+    print(f"  Duration   : {analytics['session_duration']}")
+
+
+# ============================================================
+# MODE FUNCTIONS
+# ============================================================
+
+def quick_demo(session_id="quick_demo"):
+    """Quick demonstration of all system features."""
+    print("\n🧪 CVIP RAG - Quick Feature Demo")
+    print("=" * 60)
+    print("📚 Testing all query types: Domain | General | Memory | OOD")
+    print("=" * 60)
+    
+    demo_questions = [
+        ("🔬 Domain",  "What is digital image processing?"),
+        ("🔬 Domain",  "Explain edge detection with an example"),
+        ("🔬 Domain",  "How does the Sobel operator work?"),
+        ("🌍 General", "What is the history of digital image processing?"),
+        ("🌍 General", "What is the capital of Andhra Pradesh?"),
+        ("🚫 OOD",     "How does deeplearning effect computer vision?"),
+        ("🧠 Memory",  "What was my first question?"),
+        ("🧠 Memory",  "List all the questions I asked"),
+    ]
+    
+    for label, question in demo_questions:
+        print(f"\n{label}: {question}")
+        print("-" * 50)
+        
+        start    = time.time()
+        response = rag.ask(query=question, session_id=session_id)
+        elapsed  = time.time() - start
+        
+        answer = response['answer']
+        if len(answer) > 300:
+            answer = answer[:300] + "..."
+        
+        print(f"🤖 {answer}")
+        
+        if response.get('citations'):
+            print(f"📚 Sources: {', '.join(response['citations'][:2])}")
+        
+        print(f"📊 {response['support_level']} | "
+              f"{response['confidence']:.0%} | "
+              f"{elapsed:.1f}s")
+        
+        time.sleep(0.5)
+    
+    print("\n" + "=" * 60)
+    print("📊 DEMO COMPLETE — Showing Analytics:")
+    display_farewell_summary(session_id)
+
+
+def interactive_mode(session_id="interactive_demo"):
+    """Full interactive mode — domain, general, memory all work naturally."""
+    print("\n🤖 CVIP RAG System - Interactive Mode")
+    print("=" * 70)
+    print("📚 10,097 chunks | LLaMA 3.3 70B | BGE-Large embeddings")
+    print("=" * 70)
+    print("💡 Ask anything — CVIP topics, general knowledge, or memory questions")
+    print("   e.g. 'What was my third question?' works naturally mid-conversation")
+    print("   Commands: 'quit' = full summary | 'stats' = live stats")
+    print("=" * 70)
+    
+    while True:
+        try:
+            query = input("\n❓ Your question: ").strip()
+        except EOFError:
+            break
+        
+        if not query:
+            continue
+        
+        if query.lower() in ['quit', 'exit', 'q']:
+            print("\n🔄 Generating session summary...")
+            display_farewell_summary(session_id)
+            break
+        
+        if query.lower() == 'stats':
+            display_realtime_stats(session_id)
+            continue
+        
+        response = rag.ask(query=query, session_id=session_id)
+        
+        print(f"\n🤖 ANSWER:")
+        print(response['answer'])
+        
+        if response.get('citations'):
+            print(f"\n📚 SOURCES:")
+            for i, c in enumerate(response['citations'], 1):
+                print(f"   {i}. {c}")
+        
+        print(f"\n📊 Confidence: {response['confidence']:.1%} | "
+              f"Support: {response['support_level']} | "
+              f"Latency: {response['latency_ms']}ms")
+        print("-" * 70)
+
+
+# ============================================================
+# MAIN LAUNCHER
+# ============================================================
+
+print("\n" + "🎓" * 35)
+print("\n  🤖 CVIP RAG SYSTEM — Powered by Databricks + LLaMA 3.3 70B")
+print("\n" + "🎓" * 35)
+
+print("""
+🎯 Versatile RAG System
+Enhanced capabilities:
+  ✅ Technical CVIP questions with citations
+  ✅ General knowledge questions
+  ✅ Memory recall — ask about any previous question naturally
+  ✅ Out-of-domain detection
+
+Choose an option:
+  1. Interactive Mode    (Full Experience)
+  2. Quick Feature Demo (Automated showcase)
+""")
+
+choice = input("Enter choice (1 or 2): ").strip()
+
+if choice == "1":
+    interactive_mode()
+elif choice == "2":
+    quick_demo()
+else:
+    print("❌ Invalid choice — launching Interactive Mode by default")
+    interactive_mode()
+
+# COMMAND ----------
+
+import requests, base64, getpass, re
+
+GITHUB_TOKEN = getpass.getpass("GitHub token: ")
+REPO   = "Dhanushhuu/Dhanush-demo"
+BRANCH = "main"
+
+# Step 1: Re-export notebook
+token = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiToken().get()
+host  = "https://YOUR_WORKSPACE.cloud.databricks.com"
+path  = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+
+r = requests.get(
+    f"{host}/api/2.0/workspace/export",
+    headers={"Authorization": f"Bearer {token}"},
+    params={"path": path, "format": "SOURCE"}
+)
+source = base64.b64decode(r.json()["content"]).decode("utf-8")
+print(f"✅ Exported: {len(source)} chars")
+
+# Step 2: Scrub ALL secrets
+patterns = [
+    (r'github_pat_[A-Za-z0-9_]{80,}',                   'GITHUB_TOKEN_REMOVED'),
+    (r'ghp_[A-Za-z0-9]{36,}',                           'GITHUB_TOKEN_REMOVED'),
+    (r'dapi[a-zA-Z0-9]{32,}',                           'DATABRICKS_TOKEN_REMOVED'),
+    (r'https://dbc-[a-zA-Z0-9\-]+\.cloud\.databricks\.com',
+                                                          'https://YOUR_WORKSPACE.cloud.databricks.com'),
+]
+for pattern, replacement in patterns:
+    matches = re.findall(pattern, source)
+    if matches:
+        print(f"🔍 Scrubbed {len(matches)}x: {pattern[:40]}")
+    source = re.sub(pattern, replacement, source)
+
+print(f"✅ Scrubbed: {len(source)} chars")
+
+# Step 3: Push
+def push(filename, content_str):
+    content_bytes = base64.b64encode(content_str.encode()).decode()
+    r = requests.get(
+        f"https://api.github.com/repos/{REPO}/contents/{filename}",
+        headers={"Authorization": f"token {GITHUB_TOKEN}"}
+    )
+    sha = r.json().get("sha") if r.status_code == 200 else None
+    payload = {
+        "message": f"Update {filename} — latest RAG system",
+        "content": content_bytes,
+        "branch":  BRANCH
+    }
+    if sha:
+        payload["sha"] = sha
+    r = requests.put(
+        f"https://api.github.com/repos/{REPO}/contents/{filename}",
+        headers={"Authorization": f"token {GITHUB_TOKEN}"},
+        json=payload,
+        timeout=120
+    )
+    print(f"{'✅' if r.status_code in [200,201] else '❌'} {filename}: {r.status_code}")
+    if r.status_code not in [200, 201]:
+        print(r.text[:300])
+
+push("rag_components.py", source)
+
+print("\n🎉 Done! Revoke your token now:")
+print("github.com → Settings → Developer settings → Fine-grained tokens → Revoke")
