@@ -3312,10 +3312,17 @@ print("\n🎯 Now you can run the FinalProductionRAG cell!")
 
 # COMMAND ----------
 
+# MAGIC %pip install openai
+# MAGIC %pip install databricks-vectorsearch
+# MAGIC %pip install databricks-sdk
+# MAGIC dbutils.library.restartPython()
+
+# COMMAND ----------
+
 # ============================================================
 # COMPLETE RAG SYSTEM - ALL COMPONENTS
 # ============================================================
-%pip install openai
+%pip install openai databricks-vectorsearch databricks-sdk
 import re
 import uuid
 import time
@@ -5988,15 +5995,39 @@ def display_realtime_stats(session_id="interactive_demo"):
     print(f"  Duration   : {analytics['session_duration']}")
 
 
+def display_citations(citations):
+    """Deduplicated citation display — used in both modes."""
+    if not citations:
+        return
+    print(f"\n📚 SOURCES:")
+    seen  = set()
+    count = 1
+    for c in citations:
+        if c.strip() not in seen:
+            print(f"   {count}. {c}")
+            seen.add(c.strip())
+            count += 1
+
+
+def _clear_session(session_id: str):
+    """Clear a session so every run starts completely fresh."""
+    if session_id in rag.sessions:
+        del rag.sessions[session_id]
+        logger.info(f"🔄 Session '{session_id}' cleared — starting fresh")
+
+
 # ============================================================
 # MODE FUNCTIONS
 # ============================================================
 
 def quick_demo(session_id="quick_demo"):
     """Quick demonstration of all system features."""
+    # FIX: always start fresh
+    _clear_session(session_id)
+
     print("\n🧪 CVIP RAG - Quick Feature Demo")
     print("=" * 60)
-    print("📚 Testing all query types: Domain | General | Memory | OOD")
+    print("📚 Testing all query types: Domain | General | Memory")
     print("=" * 60)
     
     demo_questions = [
@@ -6005,7 +6036,7 @@ def quick_demo(session_id="quick_demo"):
         ("🔬 Domain",  "How does the Sobel operator work?"),
         ("🌍 General", "What is the history of digital image processing?"),
         ("🌍 General", "What is the capital of Andhra Pradesh?"),
-        ("🚫 OOD",     "How does deeplearning effect computer vision?"),
+        ("🌍 General", "How does deep learning affect computer vision?"),
         ("🧠 Memory",  "What was my first question?"),
         ("🧠 Memory",  "List all the questions I asked"),
     ]
@@ -6023,9 +6054,7 @@ def quick_demo(session_id="quick_demo"):
             answer = answer[:300] + "..."
         
         print(f"🤖 {answer}")
-        
-        if response.get('citations'):
-            print(f"📚 Sources: {', '.join(response['citations'][:2])}")
+        display_citations(response.get('citations', []))
         
         print(f"📊 {response['support_level']} | "
               f"{response['confidence']:.0%} | "
@@ -6040,6 +6069,9 @@ def quick_demo(session_id="quick_demo"):
 
 def interactive_mode(session_id="interactive_demo"):
     """Full interactive mode — domain, general, memory all work naturally."""
+    # FIX: always start fresh
+    _clear_session(session_id)
+
     print("\n🤖 CVIP RAG System - Interactive Mode")
     print("=" * 70)
     print("📚 10,097 chunks | LLaMA 3.3 70B | BGE-Large embeddings")
@@ -6058,12 +6090,13 @@ def interactive_mode(session_id="interactive_demo"):
         if not query:
             continue
         
-        if query.lower() in ['quit', 'exit', 'q']:
+        # FIX: strip stray quotes so "quit'" also exits cleanly
+        if query.lower().strip("'\"") in ['quit', 'exit', 'q']:
             print("\n🔄 Generating session summary...")
             display_farewell_summary(session_id)
             break
         
-        if query.lower() == 'stats':
+        if query.lower().strip("'\"") == 'stats':
             display_realtime_stats(session_id)
             continue
         
@@ -6071,11 +6104,7 @@ def interactive_mode(session_id="interactive_demo"):
         
         print(f"\n🤖 ANSWER:")
         print(response['answer'])
-        
-        if response.get('citations'):
-            print(f"\n📚 SOURCES:")
-            for i, c in enumerate(response['citations'], 1):
-                print(f"   {i}. {c}")
+        display_citations(response.get('citations', []))
         
         print(f"\n📊 Confidence: {response['confidence']:.1%} | "
               f"Support: {response['support_level']} | "
@@ -6087,6 +6116,14 @@ def interactive_mode(session_id="interactive_demo"):
 # MAIN LAUNCHER
 # ============================================================
 
+# FIX: clear ALL sessions on every fresh run of this cell
+for _sid in ["interactive_demo", "quick_demo"]:
+    _clear_session(_sid)
+# Also clear general knowledge cache for a truly clean run
+if hasattr(rag, '_general_cache'):
+    rag._general_cache.clear()
+    logger.info("🔄 General knowledge cache cleared")
+
 print("\n" + "🎓" * 35)
 print("\n  🤖 CVIP RAG SYSTEM — Powered by Databricks + LLaMA 3.3 70B")
 print("\n" + "🎓" * 35)
@@ -6095,9 +6132,9 @@ print("""
 🎯 Versatile RAG System
 Enhanced capabilities:
   ✅ Technical CVIP questions with citations
-  ✅ General knowledge questions
+  ✅ General knowledge questions answered gracefully
   ✅ Memory recall — ask about any previous question naturally
-  ✅ Out-of-domain detection
+  ✅ Smart query routing — CVIP, General, Memory
 
 Choose an option:
   1. Interactive Mode    (Full Experience)
@@ -6180,3 +6217,270 @@ push("rag_components.py", source)
 
 print("\n🎉 Done! Revoke your token now:")
 print("github.com → Settings → Developer settings → Fine-grained tokens → Revoke")
+
+# COMMAND ----------
+
+import requests, base64, getpass
+
+GITHUB_TOKEN = getpass.getpass("GitHub token: ")
+REPO   = "Dhanushhuu/Dhanush-demo"
+BRANCH = "main"
+
+readme = """# 🤖 CVIP RAG System
+> A Production-Ready Retrieval-Augmented Generation System for Computer Vision & Image Processing
+
+[![Databricks](https://img.shields.io/badge/Powered%20by-Databricks-red)](https://databricks.com)
+[![LLaMA](https://img.shields.io/badge/LLM-LLaMA%203.3%2070B-blue)](https://ai.meta.com)
+[![Python](https://img.shields.io/badge/Python-3.10+-green)](https://python.org)
+
+---
+
+## 📋 Overview
+
+The CVIP RAG System is a production-grade question-answering system built on Databricks, designed to answer questions about **Computer Vision and Image Processing** by retrieving relevant content from a curated knowledge base of textbooks, research papers, and surveys.
+
+### Key Capabilities
+- ✅ **Technical CVIP questions** with cited answers and page numbers
+- ✅ **General knowledge questions** answered via LLM
+- ✅ **Memory recall** — ask about any previous question naturally
+- ✅ **Smart query routing** — CVIP questions with citations, general knowledge answered gracefully using LLM
+- ✅ **Session analytics** with detailed performance metrics
+
+---
+
+## 🏗️ System Architecture
+```
+User Query
+    │
+    ▼
+┌─────────────────────┐
+│   Query Classifier  │  ──► Intent Detection (foundational/comparison/advanced)
+│   + Memory Detector │  ──► Domain Relevance Check
+└─────────────────────┘
+    │
+    ├──► Memory Query    ──► ProductionMemorySystem (instant, 0ms)
+    │
+    ├──► CVIP Domain     ──► Vector Search Retrieval
+    │                            │
+    │                        Tier-Aware Scoring
+    │                            │
+    │                        LLaMA 3.3 70B Generation
+    │                            │
+    │                        Grounding Verification
+    │
+    └──► General Query   ──► LLM Direct (cached, ~400ms)
+```
+
+---
+
+## 🗃️ Knowledge Base
+
+| Source Type | Description | Trust Tier |
+|-------------|-------------|------------|
+| 📘 Textbooks | Gonzalez & Woods DIP 4th Ed, Szeliski CV 2nd Ed | Tier 1 (Highest) |
+| 🧪 Research Papers | ViT, Deep CNN, ResNet, YOLO papers | Tier 2 |
+| 📄 Surveys | Deep learning surveys, CV application surveys | Tier 3 |
+
+- **Total Chunks**: 10,097
+- **Embedding Model**: BGE-Large
+- **Vector Index**: Databricks Vector Search
+- **Chunk Size**: ~500 tokens with overlap
+
+---
+
+## ⚙️ Core Components
+
+### 1. `SecureConfig`
+Manages all system configuration — workspace URLs, endpoint names, scoring weights, and thresholds. Fails fast if required environment variables are missing.
+
+### 2. `SafeMetadataFetcher`
+Preloads all 10,097 chunk metadata records into memory at startup. Eliminates per-query Spark calls — metadata lookups are instant Python dict operations.
+
+### 3. `QueryClassifier`
+Classifies queries by:
+- **Domain relevance** — 11 keyword categories covering core CVIP topics
+- **Intent** — foundational, advanced, comparison, implementation
+
+### 4. `MemoryQueryDetector`
+Detects memory recall queries using regex patterns. Supports ordinal references (first through tenth), list requests, and conversational memory queries.
+
+### 5. `ProductionMemorySystem`
+Sliding window memory with full session log. Supports ordinal recall, session summaries, and salience-based turn scoring.
+
+### 6. `FixedAnswerGenerator`
+Calls LLaMA 3.3 70B via Databricks serving endpoint using direct HTTP requests. Generates textbook-quality answers with mathematical notation, worked examples, and source citations.
+
+### 7. `ImprovedGroundingChecker`
+Verifies answer grounding using three metrics:
+- **Overlap score** — term overlap between answer and retrieved chunks
+- **Citation score** — citation density relative to answer length  
+- **Alignment score** — sentence-level alignment with source content
+
+### 8. `FinalQueryLogger`
+Logs all queries to a Delta table (`cvip_query_logs`) with support level, confidence, latency, and error tracking. Batched writes with smart flush strategy.
+
+### 9. `SmartFlushManager`
+Flushes query logs every N queries OR every T seconds — whichever comes first. Uses RLock to prevent deadlocks.
+
+### 10. `FinalProductionRAG`
+Main controller orchestrating all components. Handles session management, query routing, error recovery, and system statistics.
+
+---
+
+## 🔄 Query Processing Pipeline
+```
+1. Query received
+2. QueryClassifier → intent + domain relevance
+3. MemoryQueryDetector → is memory recall?
+   YES → ProductionMemorySystem.recall() → instant response
+   NO  →
+4. Is domain relevant?
+   YES → Vector Search (top-K retrieval)
+       → Tier-aware weighted scoring (α×similarity + β×priority)
+       → LLaMA 3.3 70B generation with system prompt
+       → Grounding verification → confidence score
+   NO  → Is CVIP-adjacent? → route to domain handler
+       → Is trivial/lifestyle? → reject
+       → Otherwise → LLM general knowledge (cached)
+5. Session memory updated
+6. Query logged to Delta table
+7. Response returned with citations + metrics
+```
+
+---
+
+## 📊 Retrieval Scoring
+
+Chunks are scored using a weighted combination:
+```
+weighted_score = α × similarity_score + β × priority_score
+```
+
+Weights vary by query intent:
+
+| Intent | α (Similarity) | β (Priority) |
+|--------|---------------|--------------|
+| Foundational | 0.6 | 0.4 |
+| Advanced | 0.8 | 0.2 |
+| Comparison | 0.7 | 0.3 |
+| Implementation | 0.7 | 0.3 |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Databricks workspace (AWS/Azure/GCP)
+- Vector Search endpoint configured
+- LLaMA 3.3 70B serving endpoint active
+
+### Environment Setup
+```python
+import os
+os.environ["DATABRICKS_HOST"] = "https://your-workspace.cloud.databricks.com"
+```
+
+### Initialize System
+```python
+rag = FinalProductionRAG(
+    enable_reranking=False,
+    enable_persistence=True,
+    flush_every_n=3,
+    flush_every_seconds=30
+)
+```
+
+### Ask Questions
+```python
+# CVIP question with citations
+response = rag.ask("What is edge detection?", session_id="demo")
+
+# Memory recall
+response = rag.ask("What was my first question?", session_id="demo")
+
+# General knowledge
+response = rag.ask("What is the capital of Andhra Pradesh?", session_id="demo")
+```
+
+---
+
+## 📈 Performance
+
+| Metric | Value |
+|--------|-------|
+| Knowledge Base | 10,097 chunks |
+| Avg Domain Query Latency | ~4-6 seconds |
+| Avg General Query Latency | ~400ms (cached: 0ms) |
+| Memory Recall Latency | <5ms |
+| Metadata Preload Time | ~2.5 minutes (one-time) |
+| Supported Ordinals | first through tenth |
+
+---
+
+## 🗂️ Repository Structure
+```
+├── rag_components.py     # Complete RAG system (all components)
+├── README.md             # This file
+└── app.yaml              # Databricks Apps deployment config
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Platform | Databricks (Serverless) |
+| Vector Database | Databricks Vector Search |
+| Embedding Model | BGE-Large |
+| LLM | LLaMA 3.3 70B Instruct |
+| Storage | Delta Lake |
+| Language | Python 3.10+ |
+| Memory | In-process sliding window |
+
+---
+
+## 👨‍💻 Author
+
+**Dhanush Kumar**  
+Final Year Project — Computer Vision & Image Processing  
+2026-2027
+
+---
+
+## 📚 Knowledge Sources
+
+- Gonzalez & Woods, *Digital Image Processing*, 4th Edition
+- Szeliski, *Computer Vision: Algorithms and Applications*, 2nd Edition  
+- Rawat & Wang, *Deep Convolutional Neural Networks for Image Classification*
+- Dosovitskiy et al., *An Image is Worth 16×16 Words: Transformers for Image Recognition at Scale*
+- Various CVIP surveys and research papers
+"""
+
+def push(filename, content_str):
+    content_bytes = base64.b64encode(content_str.encode()).decode()
+    r = requests.get(
+        f"https://api.github.com/repos/{REPO}/contents/{filename}",
+        headers={"Authorization": f"token {GITHUB_TOKEN}"}
+    )
+    sha = r.json().get("sha") if r.status_code == 200 else None
+    payload = {
+        "message": f"Add {filename}",
+        "content": content_bytes,
+        "branch":  BRANCH
+    }
+    if sha:
+        payload["sha"] = sha
+    r = requests.put(
+        f"https://api.github.com/repos/{REPO}/contents/{filename}",
+        headers={"Authorization": f"token {GITHUB_TOKEN}"},
+        json=payload,
+        timeout=60
+    )
+    print(f"{'✅' if r.status_code in [200,201] else '❌'} {filename}: {r.status_code}")
+
+push("README.md", readme)
+
+print("\n🎉 README pushed!")
+print(f"🔗 https://github.com/{REPO}")
+print("\n⚠️  Revoke your token now!")
